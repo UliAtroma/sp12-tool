@@ -2116,3 +2116,19 @@ if ('serviceWorker' in navigator && location.protocol !== 'file:') {
 if ('launchQueue' in window) launchQueue.setConsumer(async p => { if (p.files && p.files.length) openFiles(await Promise.all(p.files.map(h => h.getFile()))); });
 refreshChrome(); led(`SP-12 TOOL V${VERSION}`);
 window.sp12 = { st, openFiles, get seqT() { return seqT; } };
+// ---- touch: hold a pad = note repeat (like Shift + pad key) ----
+{
+  const HOLD_MS = 350, holds = new Map();
+  const end = id => { const h = holds.get(id); if (!h) return; clearTimeout(h.t); stopRepeat(h.code); holds.delete(id); };
+  const endAll = () => [...holds.keys()].forEach(end);
+  document.addEventListener('pointerdown', e => {
+    const el = e.target.closest && e.target.closest('.pad[data-p]'); if (!el || e.button !== 0 || e.altKey) return;
+    end(e.pointerId); const p = +el.dataset.p, code = 'hold' + e.pointerId;
+    holds.set(e.pointerId, { code, t: setTimeout(() => startRepeat(code, p), HOLD_MS) });
+  }, true);
+  ['pointerup', 'pointercancel'].forEach(ev => document.addEventListener(ev, e => end(e.pointerId), true));
+  document.addEventListener('pointermove', e => { if (e.pointerType === 'mouse' && !e.buttons) end(e.pointerId); }, true);
+  ['touchend', 'touchcancel'].forEach(ev => document.addEventListener(ev, e => { if (!e.touches.length) endAll(); }, true));
+  addEventListener('blur', endAll);
+  document.addEventListener('contextmenu', e => { if (e.target.closest && e.target.closest('.pad')) e.preventDefault(); });
+}
