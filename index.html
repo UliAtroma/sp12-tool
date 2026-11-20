@@ -346,5 +346,7 @@
 <div class="modal" id="modal" hidden><div class="card"><div id="modalBody"></div><div class="modalBtns" id="modalBtns"></div></div></div>
 </div>
 <script type="module" src="app.js"></script>
+<script>/* iPhone/iPad: Safari greys out files whose extension it does not know (.SP12, .SQ12, .syx) – allow all files there */
+if (/iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)) document.querySelectorAll('#fileIn, #mSyxFile').forEach(i => i.removeAttribute('accept'));</script>
 </body>
 </html>
