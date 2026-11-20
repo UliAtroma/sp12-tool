@@ -260,7 +260,8 @@ canvas.vu{width:100%;height:auto;aspect-ratio:200/96;background:#e9dcb2;border:2
 
 .pop .about{font-size:11px;line-height:1.5;color:rgba(255,255,255,.85);max-width:260px;margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,.1)}
 .pop .about a{color:inherit}
-/* touch: no double-tap zoom, no text selection or callout when holding pads and buttons */
-html { touch-action: manipulation; }
+/* touch: no double-tap zoom (touch-action is not inherited, so set it on every element), no selection or callout on pads and buttons */
+*, *::before, *::after { touch-action: manipulation; }
 .pad, .btn, button, .fader, .knob { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
 .pad { touch-action: none; }
+.btn.repSw.on { background: #ff3326; color: #fff; border-color: #ff3326; }
