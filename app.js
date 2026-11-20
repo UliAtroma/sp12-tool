@@ -2139,3 +2139,22 @@ window.sp12 = { st, openFiles, get seqT() { return seqT; } };
   // iOS Safari ignores touch-action for double-tap zoom in some places: swallow the second tap of a quick double tap
   let lastTap = 0; document.addEventListener('touchend', e => { const now = e.timeStamp; if (now - lastTap < 350 && !(e.target.closest && e.target.closest('input, select, textarea'))) e.preventDefault(); lastTap = now; }, { passive: false });
 }
+// ---- delete segment (button next to + Seg) ----
+{
+  const add = $('#segNew'), del = document.createElement('button');
+  del.className = 'btn'; del.id = 'segDel'; del.textContent = '− Seg'; del.title = 'Delete the selected segment';
+  if (add) add.after(del);
+  del.onclick = async () => {
+    if (st.sq == null) return; const f = sqFile(), T = C.segTable(f.bytes), n = st.seg;
+    if (T[n] == null) { toast('No segment selected.'); return; }
+    const nn = String(n).padStart(2, '0'), used = C.decodeSongs(f.bytes).filter(sg => sg.steps.some(([c]) => c === n)).map(sg => String(sg.n).padStart(2, '0'));
+    const ok = await modal(`<p>Delete segment ${nn}?</p>${used.length ? `<p>It is used in song ${used.join(', ')} – those steps will play nothing until you change them.</p>` : ''}<p>Undo brings it back.</p>`, [['Cancel', null], ['Delete', 'ok', true]]);
+    if (ok !== 'ok') return;
+    if (seqT && !seqT.song) stopSeq();
+    let nb; try { nb = C.deleteSegment(f.bytes, n); } catch (e) { toast(e.message); return; }
+    snapshot(st.sq); f.bytes = nb; f.dirty = true;
+    const left = C.segTable(nb).map((o, k) => o == null ? null : k).filter(k => k != null);
+    st.seg = left.find(k => k > n) ?? left[left.length - 1] ?? 0;
+    refreshSQ(); refreshChrome(); toast(`Segment ${nn} deleted`);
+  };
+}
