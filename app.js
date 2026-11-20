@@ -2116,19 +2116,26 @@ if ('serviceWorker' in navigator && location.protocol !== 'file:') {
 if ('launchQueue' in window) launchQueue.setConsumer(async p => { if (p.files && p.files.length) openFiles(await Promise.all(p.files.map(h => h.getFile()))); });
 refreshChrome(); led(`SP-12 TOOL V${VERSION}`);
 window.sp12 = { st, openFiles, get seqT() { return seqT; } };
-// ---- touch: hold a pad = note repeat (like Shift + pad key) ----
+// ---- pad repeat switch: on = pads repeat while held (from the first hit, at the grid), off = normal trigger ----
 {
-  const HOLD_MS = 350, holds = new Map();
-  const end = id => { const h = holds.get(id); if (!h) return; clearTimeout(h.t); stopRepeat(h.code); holds.delete(id); };
+  const holds = new Map(), bar = $('.outsBar'), btn = document.createElement('button');
+  btn.className = 'btn repSw'; btn.id = 'padRepeat'; btn.textContent = 'Repeat'; btn.title = 'Note repeat: on = hold a pad to repeat it at the grid (Raster)';
+  const show = () => btn.classList.toggle('on', !!st.opt.padRepeat); show();
+  btn.onclick = () => { st.opt.padRepeat = !st.opt.padRepeat; saveLS('sp12opt', st.opt); show(); flashLcd(st.opt.padRepeat ? 'REPEAT ON' : 'REPEAT OFF'); };
+  if (bar) bar.insertBefore(btn, $('#outs').nextSibling);
+  const end = id => { const h = holds.get(id); if (!h) return; stopRepeat(h); holds.delete(id); };
   const endAll = () => [...holds.keys()].forEach(end);
   document.addEventListener('pointerdown', e => {
-    const el = e.target.closest && e.target.closest('.pad[data-p]'); if (!el || e.button !== 0 || e.altKey) return;
-    end(e.pointerId); const p = +el.dataset.p, code = 'hold' + e.pointerId;
-    holds.set(e.pointerId, { code, t: setTimeout(() => startRepeat(code, p), HOLD_MS) });
+    if (!st.opt.padRepeat) return; const el = e.target.closest && e.target.closest('.pad[data-p]'); if (!el || e.button !== 0 || e.altKey) return;
+    end(e.pointerId); const code = 'hold' + e.pointerId; startRepeat(code, +el.dataset.p);
+    const R = repeats.get(code); if (R) { const c = ctx(), step = (+$('#gridRes').value || 24) * (seqT ? seqT.tickSec : 60 / Math.max(20, +$('#bpm').value || 90) / C.PPQ); if (R.next - c.currentTime < 0.03) R.next += step; }  // the pad's own hit is the first note
+    holds.set(e.pointerId, code);
   }, true);
   ['pointerup', 'pointercancel'].forEach(ev => document.addEventListener(ev, e => end(e.pointerId), true));
   document.addEventListener('pointermove', e => { if (e.pointerType === 'mouse' && !e.buttons) end(e.pointerId); }, true);
   ['touchend', 'touchcancel'].forEach(ev => document.addEventListener(ev, e => { if (!e.touches.length) endAll(); }, true));
   addEventListener('blur', endAll);
   document.addEventListener('contextmenu', e => { if (e.target.closest && e.target.closest('.pad')) e.preventDefault(); });
+  // iOS Safari ignores touch-action for double-tap zoom in some places: swallow the second tap of a quick double tap
+  let lastTap = 0; document.addEventListener('touchend', e => { const now = e.timeStamp; if (now - lastTap < 350 && !(e.target.closest && e.target.closest('input, select, textarea'))) e.preventDefault(); lastTap = now; }, { passive: false });
 }
