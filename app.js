@@ -1717,7 +1717,7 @@ function startRepeat(code, pad) {
   const firstT = () => {
     const now = c.currentTime;
     if (seqT) { const cur = [...seqT.sched].reverse().find(x => x.t <= now); if (cur) { const tk = (now - cur.t) / seqT.tickSec, r = res(); const near = Math.round(tk / r) * r;
-      return (now - (cur.t + near * seqT.tickSec)) < 0.03 ? Math.max(now, cur.t + near * seqT.tickSec) : cur.t + Math.ceil(tk / r) * r * seqT.tickSec; } }
+      return (now - (cur.t + near * seqT.tickSec)) < 0.03 ? cur.t + near * seqT.tickSec : cur.t + Math.ceil(tk / r) * r * seqT.tickSec; } }
     return now;
   };
   R.next = firstT();
@@ -2127,8 +2127,9 @@ window.sp12 = { st, openFiles, get seqT() { return seqT; } };
   const endAll = () => [...holds.keys()].forEach(end);
   document.addEventListener('pointerdown', e => {
     if (!st.opt.padRepeat) return; const el = e.target.closest && e.target.closest('.pad[data-p]'); if (!el || e.button !== 0 || e.altKey) return;
-    end(e.pointerId); const code = 'hold' + e.pointerId; startRepeat(code, +el.dataset.p);
-    const R = repeats.get(code); if (R) { const c = ctx(), step = (+$('#gridRes').value || 24) * (seqT ? seqT.tickSec : 60 / Math.max(20, +$('#bpm').value || 90) / C.PPQ); if (R.next - c.currentTime < 0.03) R.next += step; }  // the pad's own hit is the first note
+    end(e.pointerId); const code = 'hold' + e.pointerId;
+    if (seqT) { e.stopPropagation(); startRepeat(code, +el.dataset.p); }   // sequence running: every note incl. the first lands on the grid
+    else { startRepeat(code, +el.dataset.p); const R = repeats.get(code); if (R) R.next += (+$('#gridRes').value || 24) * 60 / Math.max(20, +$('#bpm').value || 90) / C.PPQ; }  // free: the pad's own hit is the first note
     holds.set(e.pointerId, code);
   }, true);
   ['pointerup', 'pointercancel'].forEach(ev => document.addEventListener(ev, e => end(e.pointerId), true));
