@@ -556,3 +556,13 @@ export function writeSongs(bytes, songs) {
   ptr.forEach((q, n) => setLe16(nb, SONG_TABLE + 2 * n, q));
   return finishSQ(nb, bytes);
 }
+// remove segment n: its bytes leave the lower area, later segments and the songs move down, the table entry becomes empty
+export function deleteSegment(bytes, n) {
+  const tbl = segTable(bytes), off = tbl[n]; if (off == null) throw new Error('Segment ' + n + ' is empty');
+  const len = decodeSegment(bytes, off).end - off, h = seqHeader(bytes), end = songAreaEnd(bytes);
+  const nb = new Uint8Array(end - len);
+  nb.set(bytes.subarray(0, off)); nb.set(bytes.subarray(off + len, end), off);
+  for (let k = 0; k < NSEG; k++) { const p = le16(nb, SEG_TABLE + 2 * k); if (p >> 8 && p !== 0xffff && p - SQ_RAM_DELTA > off) setLe16(nb, SEG_TABLE + 2 * k, p - len); }
+  setLe16(nb, SEG_TABLE + 2 * n, 0); setLe16(nb, 0x203, h.lt - len);
+  return finishSQ(nb, bytes);
+}
