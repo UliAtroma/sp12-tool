@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#16171a">
+<title>SP·12 Turbo Tool</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="faceplate">
+
+<header class="top">
+  <div class="brand"><span class="logo">SP·12</span><span class="sub">turbo tool</span></div>
+  <div class="led" id="led"><span id="ledText">NO FILE</span></div>
+  <div class="actions">
+    <label class="btn primary">Open<input type="file" id="fileIn" accept=".sp12,.SP12,.sq12,.SQ12,.wav,.aif,.aiff,.mp3" multiple hidden></label>
+    <button class="btn" id="saveBtn" disabled>Save</button>
+    <button class="btn" id="undoBtn" disabled title="Ctrl+Z">Undo</button>
+    <details class="more right"><summary class="btn ghost">⚙</summary><div class="pop">
+      <label class="knob">Rate <select id="rateSel"><option value="26040" selected>26.04 kHz</option><option value="27500">27.5 kHz</option></select></label>
+      <button class="btn ghost" id="midiBtn">MIDI out…</button>
+      <button class="btn ghost" id="installBtn" hidden>Install app</button>
+      <div class="about" id="about">
+        <b>SP·12 Turbo Tool</b> <span id="aboutVer"></span><br>
+        Unofficial. Not affiliated with E-mu Systems or Creative Technology.<br>
+        Back up your SP-12 (3 1 / 3 2) before loading anything into it.<br>
+        Runs entirely in your browser – no data leaves your computer.<br>
+        MIT License · <a id="aboutSrc" href="README.md" target="_blank" rel="noopener">About &amp; source</a>
+      </div>
+    </div></details>
+  </div>
+</header>
+
+<nav class="tabs" id="tabs">
+  <button data-tab="main" class="on">Programming</button>
+  <button data-tab="sample">Sample</button>
+  <button data-tab="mixer">Mixer</button>
+  <button data-tab="midi">Disk / MIDI</button>
+  <button data-tab="hex">Data</button>
+  <div class="filechips" id="fileChips"></div>
+</nav>
+
+<main>
+  <div id="drop" class="drop"><div><b>.SP12 / .SQ12</b> anywhere · <b>audio onto a pad</b></div></div>
+
+  <!-- PROGRAMMING -->
+  <section id="tab-main" class="tab on">
+    <div class="empty" data-need="SQ12">Open a <b>.SQ12</b> file – or start from scratch: <button class="btn primary" id="newSq12">New sequence file</button></div>
+    <div data-has="SQ12">
+      <div class="bar">
+        <button class="btn primary" id="seqPlay">▶ Seg</button>
+        <button class="btn" id="songPlay">▶ Song</button>
+        <button class="btn" id="seqStop">■</button>
+        <button class="btn rec" id="recBtn">● Rec</button>
+        <label class="chk"><input type="checkbox" id="seqLoop" checked> Loop</label>
+        <label class="chk"><input type="checkbox" id="metroOn"> Click</label>
+        <label class="knob">BPM <input id="bpm" type="number" min="20" max="255" step="1" value="90" style="width:62px"></label>
+        <label class="knob">Grid <select id="gridRes"><option value="24">1/16</option><option value="12">1/32</option><option value="48">1/8</option><option value="32">1/8T</option><option value="16">1/16T</option><option value="8">1/32T</option></select></label>
+        <label class="knob">Swing <select id="swingSel"><option value="file">segment</option><option value="50">50%</option><option value="54">54%</option><option value="58">58%</option><option value="63">63%</option><option value="67">67%</option><option value="71">71%</option></select></label>
+        <output id="swingInfo" class="knob dim"></output>
+        <span class="grow"></span>
+        <button class="btn" id="segNew">+ Seg</button>
+        <button class="btn" id="wavExport">Export</button>
+        <details class="more right"><summary class="btn ghost">⋯</summary><div class="pop">
+          <label class="knob">Length <input id="segBars" type="number" min="1" max="396" value="4" style="width:56px"> beats</label>
+          <button class="btn ghost" id="segClear">Clear segment</button>
+          <label class="knob">New notes <select id="newLevel"><option value="">default</option><option value="15">Level F</option><option value="13">Level D</option><option value="11">Level B</option><option value="9">Level 9</option><option value="7">Level 7</option><option value="5">Level 5</option></select></label>
+          <label class="chk"><input type="checkbox" id="allPads"> all 32 pads</label>
+          <label class="chk"><input type="checkbox" id="jitterOn"> SP-12 jitter</label>
+          <label class="knob">± <input type="range" id="jitterMs" min="0" max="4" step="0.25" value="1.25"><output id="jitterOut">1.25 ms</output></label>
+          <button class="btn ghost" id="midiSeg">MIDI file: segment</button>
+          <button class="btn ghost" id="midiSong">MIDI file: song</button>
+        </div></details>
+      </div>
+      <div class="seqLayout">
+        <aside class="side">
+          <ol id="segList" class="segList"></ol>
+          <div class="sideHead">Song</div>
+          <div id="songView" class="songView"></div>
+          <div id="songEdit" class="songEdit"></div>
+        </aside>
+        <div class="seqMain">
+          <div id="songLane" class="songLane" hidden></div>
+          <canvas id="grid"></canvas>
+        </div>
+      </div>
+      <input type="file" id="padWav" accept="audio/*,.wav,.aif,.aiff" hidden>
+    </div>
+  </section>
+
+  <!-- SAMPLE -->
+  <section id="tab-sample" class="tab">
+    <div class="empty" data-need="SP12">Open a <b>.SP12</b> file – or start sampling: <button class="btn primary" id="newSp12">New sound file</button></div>
+    <div class="soundsLayout" data-has="SP12">
+      <aside class="side regionList">
+        <div class="sideHead">Sounds <button class="mini" id="autoSplitBtn" title="Find more sound starts">split</button></div>
+        <ol id="regions"></ol>
+        <div class="memBar" id="memBar"></div>
+        <div class="memText" id="memText"></div>
+      </aside>
+      <div class="editor">
+        <div class="waveHead"><div id="regionTitle" class="regionTitle">–</div><div class="sel" id="selInfo"></div></div>
+        <canvas id="overview" height="30"></canvas>
+        <canvas id="wave" height="200"></canvas>
+        <div class="bar">
+          <button class="btn primary" id="playBtn">▶</button>
+          <button class="btn" id="playSelBtn">▶ Sel</button>
+          <button class="btn" id="stopBtn">■</button>
+          <label class="knob">Pitch <input type="range" id="pitch" min="-24" max="24" value="0"><output id="pitchOut">0 st</output></label>
+          <span class="grow"></span>
+          <label class="knob">Pad <select id="tPad"></select></label>
+          <button class="btn primary" id="tPlay">▶ Pad</button>
+          <label class="chk" title="Hitting a pad selects its sound"><input type="checkbox" id="tFollow" checked> follow</label>
+        </div>
+        <nav class="sub" id="subTabs">
+          <button data-sub="trim" class="on">Trim / Loop</button>
+          <button data-sub="rec">Sampling</button>
+          <button data-sub="chop">Chop / Copy</button>
+          <button data-sub="mem">Memory</button>
+        </nav>
+
+        <div class="subp on" id="sub-trim">
+          <div class="bar" id="truncRow">
+            <label class="knob">Start <input id="tStart" type="number" min="0" style="width:80px"></label>
+            <label class="knob">End <input id="tEnd" type="number" min="1" style="width:80px"></label>
+            <label class="chk"><input type="checkbox" id="tLoop"> Loop</label>
+            <label class="knob">from <input id="tLoopS" type="number" min="0" style="width:80px"></label>
+            <button class="btn ghost" id="tFromSel" title="Selection → start / end">Sel → S/E</button>
+            <button class="btn ghost" id="tLoopCur" title="Cursor → loop start">Cursor → Loop</button>
+            <span class="tj">S <button class="mini" data-tj="S-" title="Start → previous transient">◂</button><button class="mini" data-tj="S+" title="Start → next transient">▸</button></span>
+            <span class="tj">E <button class="mini" data-tj="E-" title="End → previous transient">◂</button><button class="mini" data-tj="E+" title="End → next transient (cuts before the hit)">▸</button></span>
+            <span class="dim" id="tInfo"></span>
+          </div>
+          <div class="bar tfaders">
+            <label class="knob">S <input type="range" id="tfS" min="0" max="1" step="0.0005"><button class="mini" id="tlS" title="MIDI learn">Learn</button></label>
+            <label class="knob">E <input type="range" id="tfE" min="0" max="1" step="0.0005"><button class="mini" id="tlE" title="MIDI learn">Learn</button></label>
+            <label class="knob">L <input type="range" id="tfL" min="0" max="1" step="0.0005"><button class="mini" id="tlL" title="MIDI learn">Learn</button></label>
+          </div>
+          <div class="bar">
+            <button class="btn ghost" data-op="normalize">Normalize</button>
+            <button class="btn ghost" data-op="gainUp">+3 dB</button>
+            <button class="btn ghost" data-op="gainDown">−3 dB</button>
+            <button class="btn ghost" data-op="reverse">Reverse</button>
+            <button class="btn ghost" data-op="fadeIn">Fade in</button>
+            <button class="btn ghost" data-op="fadeOut">Fade out</button>
+            <button class="btn ghost" data-op="silence">Silence</button>
+            <button class="btn ghost" data-op="truncate" title="Cut the sound at the selection end">Truncate</button>
+            <details class="more"><summary class="btn ghost">⋯</summary><div class="pop">
+              <label class="btn ghost">Replace with audio…<input type="file" id="wavReplace" accept="audio/*,.wav,.aif,.aiff,.mp3" hidden></label>
+              <label class="btn ghost">Append audio…<input type="file" id="wavAppend" accept="audio/*,.wav,.aif,.aiff,.mp3" hidden></label>
+              <button class="btn ghost" id="expWav">Export sound (WAV)</button>
+              <button class="btn ghost" id="expAll">Export all sounds</button>
+              <button class="btn ghost" id="expMem">Export memory</button>
+              <button class="btn ghost" id="splitBtn">Split at cursor</button>
+              <button class="btn ghost" id="unsplitBtn">Remove split</button>
+              <label class="chk"><input type="checkbox" id="zoh" checked> zero-order hold</label>
+            </div></details>
+          </div>
+          <div id="longRow" hidden>
+            <canvas id="longWave" height="70"></canvas>
+            <div class="bar">
+              <button class="btn" id="lPlay">▶ S–E</button>
+              <span class="tj">S <button class="mini" data-lj="S-">◂</button><button class="mini" data-lj="S+">▸</button></span>
+              <span class="tj">E <button class="mini" data-lj="E-">◂</button><button class="mini" data-lj="E+">▸</button></span>
+              <label class="chk" title="Keep start–end within 2.5 s (fits the SP-12)"><input type="checkbox" id="lCap" checked> max 2.5 s</label>
+              <button class="btn primary" id="lTrunc" title="Keep start–end; up to 2.5 s it goes into the SP-12 memory">Truncate</button>
+              <span class="dim" id="lInfo"></span>
+            </div>
+          </div>
+        </div>
+
+        <div class="subp" id="sub-rec">
+          <div class="bar" id="sampRow">
+            <button class="btn" id="smpPower">Input on</button>
+            <select id="smpIn"><option value="">default input</option></select>
+            <select id="smpCh"><option value="mix">L+R</option><option value="L">L</option><option value="R">R</option></select>
+            <label class="chk"><input type="checkbox" id="smpMon"> monitor</label>
+            <canvas id="smpVu" height="22"></canvas>
+            <label class="chk"><input type="checkbox" id="smpVuLcd"> 1 VU</label>
+          </div>
+          <div class="bar">
+            <label class="knob">2 Pad <select id="smpPad"></select></label>
+            <label class="knob">3 Level <input type="range" id="smpLevel" min="-12" max="24" step="1" value="0"><output id="smpLevelOut">0 dB</output></label>
+            <label class="knob">4 Thresh <input type="range" id="smpThr" min="-60" max="-3" step="1" value="-30"><output id="smpThrOut">-30 dB</output></label>
+            <label class="knob">5 Length <input type="range" id="smpLen" min="0.1" max="2.5" step="0.1" value="2.5"><output id="smpLenOut">2.5 s</output></label>
+            <label class="chk" title="On: every sample fits the SP-12 (2.5 s). Off: longer samples play in the app and go to chop">
+              <input type="checkbox" id="smpCap" checked> max 2.5 s</label>
+          </div>
+          <div class="bar">
+            <select id="smpMode"><option value="single">Single</option><option value="auto">Auto → next pad</option><option value="lazy">Lazy chop</option></select>
+            <label class="knob">Release <input type="number" id="smpRel" min="20" max="2000" value="150" style="width:58px"> ms</label>
+            <label class="chk"><input type="checkbox" id="smpOver"> overwrite</label>
+            <label class="knob" title="Store faster, tune down: less memory, more grit">Trick <select id="smpTrick"><option value="0">off</option><option value="3">−3 st</option><option value="5">−5 st</option><option value="7">−7 st</option><option value="12">−12 st</option></select></label>
+            <span class="grow"></span>
+            <button class="btn" id="smpRe">6 Re-sample</button>
+            <button class="btn primary" id="smpArm">7 Arm</button>
+            <button class="btn primary" id="smpForce">9 Force</button>
+            <button class="btn" id="smpStopBtn">■</button>
+          </div>
+          <div class="bar">
+            <span class="dim" id="smpStatus"></span>
+            <span class="grow"></span>
+            <button class="btn" id="dsBtn" title="Chop a break at its kick, snare, hats and perc hits onto free pads">Drum break → pads…</button>
+          </div>
+        </div>
+
+        <div class="subp" id="sub-chop">
+          <div class="bar">
+            <button class="btn ghost" id="chPadSrc">Source: pad</button>
+            <label class="btn ghost">Source: file…<input type="file" id="chFile" accept="audio/*,.wav,.aif,.aiff,.mp3" hidden></label>
+            <span class="dim" id="chSrc"></span>
+          </div>
+          <canvas id="chopWave" height="100"></canvas>
+          <div class="bar" id="chopRow">
+            <label class="knob">Chops <input id="chN" type="number" min="2" max="32" value="8" style="width:50px"></label>
+            <button class="btn ghost" id="chEven">Even</button>
+            <button class="btn ghost" id="chAuto">Transients</button>
+            <input type="range" id="chSens" min="0" max="1" step="0.05" value="0.6" title="sensitivity">
+            <button class="mini" id="chClear">clear</button>
+            <span class="grow"></span>
+            <label class="knob">from <select id="chTo"></select></label>
+            <label class="knob">Out <select id="chOut"><option value="0">1</option><option value="1">2</option><option value="2">3</option><option value="3">4</option><option value="4">5</option><option value="5">6</option><option value="6">7</option><option value="7" selected>8</option></select></label>
+            <label class="chk"><input type="checkbox" id="chRom"> ROM pads</label>
+            <label class="chk"><input type="checkbox" id="chFit" checked> fit memory</label>
+            <button class="btn primary" id="chGo">Chop → pads</button>
+          </div>
+          <div class="bar">
+            <label class="knob">Copy pad sound to <select id="cpTo"></select></label>
+            <button class="btn" id="cpGo">Copy</button>
+          </div>
+        </div>
+
+        <div class="subp" id="sub-mem">
+          <div class="bar">
+            <button class="btn" id="tClear" title="Alt + click on a pad">Clear pad</button>
+            <button class="btn" id="sDel">Delete sound</button>
+            <label class="btn ghost">Load audio to pad…<input type="file" id="tLoad" accept="audio/*,.wav,.mp3,.aif,.aiff,.m4a,.flac,.ogg" hidden></label>
+            <span class="grow"></span>
+            <button class="btn primary" id="sqBtn">Squeeze to fit…</button>
+          </div>
+          <div class="bar">
+            <span class="dim" id="chMem"></span>
+            <span class="grow"></span>
+            <label class="chk"><input type="checkbox" id="rambo"> Rambo</label>
+            <select id="zones"><option value="4">4 × 2.5 s</option><option value="6">6 × 2.5 s</option><option value="8" selected>8 × 2.5 s</option></select>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- MIXER -->
+  <section id="tab-mixer" class="tab"><div class="bar"><button class="btn primary" data-proxy="seqPlay">▶ Seg</button><button class="btn" data-proxy="songPlay">▶ Song</button><button class="btn" data-proxy="seqStop">■</button><span class="grow"></span><button class="btn" data-proxy="wavExport">Export</button><button class="btn ghost" id="deskReset">Reset desk</button></div><div class="desk" id="desk"></div></section>
+
+  <!-- DISK / MIDI -->
+  <section id="tab-midi" class="tab">
+    <div class="panel">
+      <div class="bar">
+        <button class="btn primary" id="mConnect">Connect MIDI</button>
+        <label class="knob">In <select id="mIn"></select></label>
+        <label class="knob">Out <select id="mOutSel"></select></label>
+        <label class="knob">Ch <input id="mChan" type="number" min="1" max="16" value="1" style="width:52px"></label>
+        <label class="knob">Notes <select id="mMap"><option value="sp12">SP-12 map</option><option value="lin">linear from</option></select> <input id="mBaseN" type="number" min="0" max="96" value="36" style="width:52px"></label>
+        <span id="mStatus" class="dim"></span>
+      </div>
+      <div class="bar">
+        <label class="chk"><input type="checkbox" id="mInPads" checked> MIDI in plays pads</label>
+        <label class="chk"><input type="checkbox" id="mThruAll"> pads always send MIDI</label>
+        <button class="btn ghost" id="mNoteTest">Note test</button>
+        <button class="btn ghost" id="mPanic">Panic</button>
+      </div>
+      <div class="sideHead">MIDI disk · SP-12: CASSETTE/DISK 3 1 / 3 2 save · 3 3 / 3 5 load</div>
+      <div class="bar">
+        <label class="chk"><input type="checkbox" id="dOn" checked> drive on</label>
+        <label class="knob">Disk to load <select id="dFile"></select></label>
+        <span id="dStatus" class="dim"></span>
+      </div>
+      <details class="fold"><summary>Sample dump (SDS) · SysEx</summary>
+        <div class="bar">
+          <label class="knob">SDS ch <input id="mSdsCh" type="number" min="0" max="127" value="0" style="width:56px"></label>
+          <label class="knob">Sample # <input id="mSdsNum" type="number" min="0" max="16383" value="0" style="width:66px"></label>
+          <button class="btn ghost" id="mSdsReq">Request</button>
+          <button class="btn ghost" id="mSdsSend">Send sound…</button>
+          <span id="mSdsProg" class="dim"></span>
+        </div>
+        <div class="bar">
+          <label class="chk"><input type="checkbox" id="mCapture" checked> capture SysEx</label>
+          <button class="btn ghost" id="mSyxSave">Save .syx</button>
+          <label class="btn ghost">Send .syx…<input type="file" id="mSyxFile" accept=".syx,.SYX,.mid" hidden></label>
+          <button class="btn ghost" id="mClear">Clear</button>
+          <span id="mCapInfo" class="dim"></span>
+        </div>
+      </details>
+      <details class="fold"><summary>Monitor</summary>
+        <div class="bar"><button class="btn ghost" id="mLogSave">Save log</button><label class="chk"><input type="checkbox" id="mLogClock"> clock</label></div>
+        <pre class="midiLog" id="mLog"></pre>
+      </details>
+    </div>
+  </section>
+
+  <!-- DATA -->
+  <section id="tab-hex" class="tab">
+    <div class="empty" data-need="ANY">No file.</div>
+    <div data-has="ANY">
+      <details class="fold" open data-has="SP12"><summary>Pad table</summary><div class="tableWrap"><table class="grid" id="padTable"></table></div></details>
+      <details class="fold" data-has="SQ12"><summary>Segment bytes · mixes</summary>
+        <div class="bytes" id="segBytes"></div>
+        <div class="tableWrap"><table class="grid kit" id="kitTable"></table></div>
+      </details>
+      <details class="fold" open><summary>Hex</summary>
+        <div class="hexBar">
+          <select id="hexFile"></select>
+          <label>Go to <input id="hexGoto" placeholder="0x28F" size="8"></label>
+          <span id="hexSelInfo"></span>
+          <label>Value <input id="hexVal" size="3" maxlength="2"></label>
+          <button class="btn" id="hexSet">Set</button>
+        </div>
+        <div class="hexView" id="hexView"><div id="hexSpacer"></div><pre id="hexRows"></pre></div>
+      </details>
+    </div>
+  </section>
+
+  <!-- PERFORMANCE: always there, like the front panel -->
+  <section class="perfDock" data-has="ANY">
+    <div class="perf" id="perf"></div>
+    <div class="bar outsBar">
+      <div class="outs" id="outs"></div>
+      <span class="grow"></span>
+      <label class="knob">Tune <input type="range" id="gTune" min="-12" max="12" step="0.25" value="0"><output id="gTuneOut">0 st</output></label>
+      <label class="knob">Decay <input type="range" id="gDecay" min="0" max="31" step="1" value="31"><output id="gDecayOut">31</output></label>
+      <details class="more right up"><summary class="btn ghost">⋯</summary><div class="pop">
+        <label class="knob">Multi range <select id="tuneRange"><option value="7">± 7 st</option><option value="12">± 12 st</option><option value="24">± 24 st</option></select></label>
+        <label class="chk"><input type="checkbox" id="noteParams"> note tune / decay</label>
+        <label class="knob">Level nibble <select id="hiMode"><option value="level">level</option><option value="pitch">multi pitch</option></select></label>
+      </div></details>
+    </div>
+  </section>
+</main>
+
+<div id="infoBox" hidden></div>
+<div class="toast" id="toast"></div>
+<div class="modal" id="modal" hidden><div class="card"><div id="modalBody"></div><div class="modalBtns" id="modalBtns"></div></div></div>
+</div>
+<script type="module" src="app.js"></script>
+</body>
+</html>
